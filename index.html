@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Schrödinger Equation Solver</title>
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --aurora-green: #00f260;
+            --aurora-blue: #0575e6;
+            --aurora-purple: #e100ff;
+            --dark-bg: #0a0a0a;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --glow-color: rgba(102, 126, 234, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--dark-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* Aurora background animation */
+        .aurora-bg {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            overflow: hidden;
+        }
+
+        .aurora-bg::before,
+        .aurora-bg::after {
+            content: '';
+            position: absolute;
+            width: 150%;
+            height: 150%;
+            top: -25%;
+            left: -25%;
+        }
+
+        .aurora-bg::before {
+            background: radial-gradient(ellipse at center, var(--aurora-green) 0%, transparent 40%),
+                        radial-gradient(ellipse at 20% 80%, var(--aurora-blue) 0%, transparent 50%),
+                        radial-gradient(ellipse at 80% 20%, var(--aurora-purple) 0%, transparent 50%);
+            opacity: 0.15;
+            animation: aurora-wave 20s ease-in-out infinite;
+        }
+
+        .aurora-bg::after {
+            background: radial-gradient(ellipse at 80% 80%, var(--aurora-blue) 0%, transparent 40%),
+                        radial-gradient(ellipse at 20% 20%, var(--aurora-purple) 0%, transparent 50%);
+            opacity: 0.1;
+            animation: aurora-wave 25s ease-in-out infinite reverse;
+        }
+
+        @keyframes aurora-wave {
+            0%, 100% { transform: rotate(0deg) scale(1); }
+            33% { transform: rotate(120deg) scale(1.1); }
+            66% { transform: rotate(240deg) scale(0.9); }
+        }
+
+        /* Container and layout */
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        /* Futuristic header */
+        .header {
+            text-align: center;
+            padding: 4rem 2rem;
+            position: relative;
+            margin-bottom: 3rem;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--primary-gradient);
+            opacity: 0.1;
+            border-radius: 30px;
+            filter: blur(100px);
+        }
+
+        h1 {
+            font-size: 4rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, var(--aurora-green) 0%, var(--aurora-blue) 50%, var(--aurora-purple) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 1rem;
+            animation: glow-pulse 3s ease-in-out infinite;
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% { filter: brightness(1); }
+            50% { filter: brightness(1.2); }
+        }
+
+        .subtitle {
+            font-size: 1.3rem;
+            color: var(--text-secondary);
+            font-weight: 300;
+        }
+
+        /* Grid layout */
+        .grid-container {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Card styling */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 2.5rem;
+            position: relative;
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, var(--aurora-blue) 50%, transparent 100%);
+            animation: scan-line 3s linear infinite;
+        }
+
+        @keyframes scan-line {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(102, 126, 234, 0.2);
+            border-color: rgba(102, 126, 234, 0.3);
+        }
+
+        .card-title {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 2rem;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+
+        .card-title::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 5px;
+            height: 30px;
+            background: var(--primary-gradient);
+            border-radius: 3px;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.8);
+        }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: 2rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.8rem;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+            font-weight: 600;
+        }
+
+        input[type="number"],
+        input[type="text"],
+        select {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            color: var(--text-primary);
+            font-size: 1.1rem;
+            transition: all 0.3s ease;
+        }
+
+        input:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--aurora-blue);
+            background: rgba(255, 255, 255, 0.05);
+            box-shadow: 0 0 0 4px rgba(5, 117, 230, 0.2);
+        }
+
+        /* Range slider custom styling */
+        input[type="range"] {
+            width: 100%;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+            outline: none;
+            -webkit-appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 24px;
+            height: 24px;
+            background: var(--primary-gradient);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.8);
+            transition: all 0.3s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        .range-value {
+            display: inline-block;
+            margin-left: 1rem;
+            padding: 0.5rem 1rem;
+            background: rgba(102, 126, 234, 0.2);
+            border-radius: 8px;
+            font-weight: 600;
+        }
+
+        /* Button styling */
+        .btn-primary {
+            width: 100%;
+            padding: 1.5rem;
+            background: var(--primary-gradient);
+            border: none;
+            border-radius: 16px;
+            color: white;
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.6);
+        }
+
+        .btn-primary:active::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        /* Visualization area */
+        .visualization-container {
+            height: 600px;
+            position: relative;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #wavefunction-plot,
+        #probability-plot {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .tab {
+            padding: 1rem 2rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 600;
+        }
+
+        .tab.active {
+            background: var(--primary-gradient);
+            border-color: transparent;
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Results panel */
+        .results-panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            padding: 2rem;
+            display: none;
+            animation: slide-up 0.5s ease-out;
+        }
+
+        @keyframes slide-up {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .result-item {
+            padding: 1.5rem;
+            background: rgba(255, 255, 255, 0.02);
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .result-label {
+            font-size: 0.9rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .result-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-top: 0.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Loading animation */
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+
+        .quantum-loader {
+            width: 80px;
+            height: 80px;
+            position: relative;
+        }
+
+        .quantum-loader div {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--aurora-blue);
+            animation: quantum-orbit 2s linear infinite;
+        }
+
+        .quantum-loader div:nth-child(1) {
+            animation-delay: 0s;
+            background: var(--aurora-green);
+        }
+
+        .quantum-loader div:nth-child(2) {
+            animation-delay: -0.5s;
+            background: var(--aurora-blue);
+        }
+
+        .quantum-loader div:nth-child(3) {
+            animation-delay: -1s;
+            background: var(--aurora-purple);
+        }
+
+        @keyframes quantum-orbit {
+            0% {
+                transform: rotate(0deg) translateX(30px) rotate(0deg);
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.3;
+            }
+            100% {
+                transform: rotate(360deg) translateX(30px) rotate(-360deg);
+                opacity: 1;
+            }
+        }
+
+        /* Responsive design */
+        @media (max-width: 1024px) {
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+            
+            h1 {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="aurora-bg"></div>
+    
+    <div class="container">
+        <header class="header">
+            <h1>Schrödinger Equation</h1>
+            <p class="subtitle">Quantum Wavefunction Evolution Simulator</p>
+        </header>
+
+        <div class="grid-container">
+            <!-- Control Panel -->
+            <div class="card">
+                <h2 class="card-title">Quantum System</h2>
+                
+                <div class="form-group">
+                    <label for="potential-type">Potential Type</label>
+                    <select id="potential-type" onchange="updatePotentialParams()">
+                        <option value="harmonic">Harmonic Oscillator</option>
+                        <option value="infinite-well">Infinite Square Well</option>
+                        <option value="finite-well">Finite Square Well</option>
+                        <option value="step">Step Potential</option>
+                        <option value="barrier">Potential Barrier</option>
+                        <option value="double-well">Double Well</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="quantum-state">Initial State</label>
+                    <select id="quantum-state">
+                        <option value="gaussian">Gaussian Wave Packet</option>
+                        <option value="eigenstate">Energy Eigenstate</option>
+                        <option value="superposition">Superposition</option>
+                        <option value="coherent">Coherent State</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="energy-level">Energy Level (n)</label>
+                    <input type="range" id="energy-level" min="1" max="10" value="1" step="1" oninput="updateRangeValue(this)">
+                    <span class="range-value" id="energy-level-value">1</span>
+                </div>
+
+                <div class="form-group">
+                    <label for="position">Initial Position (x₀)</label>
+                    <input type="number" id="position" value="0" step="0.1">
+                </div>
+
+                <div class="form-group">
+                    <label for="momentum">Initial Momentum (p₀)</label>
+                    <input type="number" id="momentum" value="0" step="0.1">
+                </div>
+
+                <div class="form-group">
+                    <label for="width">Wave Packet Width (σ)</label>
+                    <input type="number" id="width" value="1" step="0.1" min="0.1">
+                </div>
+
+                <div id="potential-params" class="form-group">
+                    <label for="frequency">Frequency (ω)</label>
+                    <input type="number" id="frequency" value="1" step="0.1" min="0.1">
+                </div>
+
+                <div class="form-group">
+                    <label for="mass">Particle Mass (m)</label>
+                    <input type="number" id="mass" value="1" step="0.1" min="0.1">
+                </div>
+
+                <div class="form-group">
+                    <label for="time-evolution">Evolution Time</label>
+                    <input type="range" id="time-evolution" min="0" max="20" value="0" step="0.1" oninput="updateTimeEvolution(this)">
+                    <span class="range-value" id="time-value">0.0</span>
+                </div>
+
+                <button class="btn-primary" onclick="solveSchrodinger()">
+                    Solve Equation
+                </button>
+            </div>
+
+            <!-- Visualization Panel -->
+            <div class="card">
+                <h2 class="card-title">Wavefunction Visualization</h2>
+                
+                <div class="tabs">
+                    <div class="tab active" onclick="switchTab('wavefunction')">Wavefunction</div>
+                    <div class="tab" onclick="switchTab('probability')">Probability Density</div>
+                    <div class="tab" onclick="switchTab('phase')">Phase Space</div>
+                    <div class="tab" onclick="switchTab('energy')">Energy Spectrum</div>
+                </div>
+                
+                <div class="visualization-container">
+                    <div id="wavefunction-plot"></div>
+                    <div id="probability-plot" style="display: none;"></div>
+                    <div class="loading-overlay" id="loading">
+                        <div class="quantum-loader">
+                            <div></div>
+                            <div></div>
+                            <div></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="results-panel" id="results-panel">
+            <h2 class="card-title">Quantum Measurements</h2>
+            <div class="result-grid">
+                <div class="result-item">
+                    <div class="result-label">Total Energy</div>
+                    <div class="result-value" id="total-energy">-</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">⟨x⟩ Position</div>
+                    <div class="result-value" id="avg-position">-</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">⟨p⟩ Momentum</div>
+                    <div class="result-value" id="avg-momentum">-</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Δx Uncertainty</div>
+                    <div class="result-value" id="position-uncertainty">-</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">Δp Uncertainty</div>
+                    <div class="result-value" id="momentum-uncertainty">-</div>
+                </div>
+                <div class="result-item">
+                    <div class="result-label">ΔxΔp Product</div>
+                    <div class="result-value" id="uncertainty-product">-</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/plotly.js/2.27.0/plotly.min.js"></script>
+    <script>
+        // Global variables
+        let currentTab = 'wavefunction';
+        let wavefunction = [];
+        let potential = [];
+        let xGrid = [];
+        let animationId = null;
+
+        // Complex number operations
+        class Complex {
+            constructor(real, imag = 0) {
+                this.real = real;
+                this.imag = imag;
+            }
+            
+            add(c) {
+                return new Complex(this.real + c.real, this.imag + c.imag);
+            }
+            
+            multiply(c) {
+                return new Complex(
+                    this.real * c.real - this.imag * c.imag,
+                    this.real * c.imag + this.imag * c.real
+                );
+            }
+            
+            magnitude() {
+                return Math.sqrt(this.real * this.real + this.imag * this.imag);
+            }
+            
+            phase() {
+                return Math.atan2(this.imag, this.real);
+            }
+        }
+
+        // Update range value display
+        function updateRangeValue(input) {
+            const valueSpan = document.getElementById(input.id + '-value');
+            if (valueSpan) {
+                valueSpan.textContent = input.value;
+            }
+        }
+
+        // Update potential parameters based on type
+        function updatePotentialParams() {
+            const potentialType = document.getElementById('potential-type').value;
+            const paramsDiv = document.getElementById('potential-params');
+            
+            let html = '';
+            switch(potentialType) {
+                case 'harmonic':
+                    html = `
+                        <label for="frequency">Frequency (ω)</label>
+                        <input type="number" id="frequency" value="1" step="0.1" min="0.1">
+                    `;
+                    break;
+                case 'infinite-well':
+                case 'finite-well':
+                    html = `
+                        <label for="well-width">Well Width (L)</label>
+                        <input type="number" id="well-width" value="10" step="0.5" min="1">
+                        ${potentialType === 'finite-well' ? `
+                        <label for="well-depth">Well Depth (V₀)</label>
+                        <input type="number" id="well-depth" value="10" step="1" min="1">
+                        ` : ''}
+                    `;
+                    break;
+                case 'step':
+                case 'barrier':
+                    html = `
+                        <label for="barrier-height">Height (V₀)</label>
+                        <input type="number" id="barrier-height" value="5" step="0.5" min="0">
+                        ${potentialType === 'barrier' ? `
+                        <label for="barrier-width">Width (a)</label>
+                        <input type="number" id="barrier-width" value="2" step="0.1" min="0.1">
+                        ` : ''}
+                    `;
+                    break;
+                case 'double-well':
+                    html = `
+                        <label for="well-separation">Separation (d)</label>
+                        <input type="number" id="well-separation" value="5" step="0.5" min="1">
+                        <label for="barrier-height">Barrier Height</label>
+                        <input type="number" id="barrier-height" value="5" step="0.5" min="0">
+                    `;
+                    break;
+            }
+            
+            paramsDiv.innerHTML = html;
+        }
+
+        // Create potential function
+        function createPotential(x, type) {
+            switch(type) {
+                case 'harmonic':
+                    const omega = parseFloat(document.getElementById('frequency').value);
+                    return 0.5 * omega * omega * x * x;
+                    
+                case 'infinite-well':
+                    const L = parseFloat(document.getElementById('well-width').value);
+                    return Math.abs(x) > L/2 ? 1000 : 0;
+                    
+                case 'finite-well':
+                    const Lf = parseFloat(document.getElementById('well-width').value);
+                    const V0 = parseFloat(document.getElementById('well-depth').value);
+                    return Math.abs(x) > Lf/2 ? V0 : 0;
+                    
+                case 'step':
+                    const Vs = parseFloat(document.getElementById('barrier-height').value);
+                    return x > 0 ? Vs : 0;
+                    
+                case 'barrier':
+                    const Vb = parseFloat(document.getElementById('barrier-height').value);
+                    const a = parseFloat(document.getElementById('barrier-width').value);
+                    return Math.abs(x) < a/2 ? Vb : 0;
+                    
+                case 'double-well':
+                    const d = parseFloat(document.getElementById('well-separation').value);
+                    const Vh = parseFloat(document.getElementById('barrier-height').value);
+                    const x1 = x + d/2;
+                    const x2 = x - d/2;
+                    return 0.5 * (x1*x1 + x2*x2) + Vh * Math.exp(-x*x);
+                    
+                default:
+                    return 0;
+            }
+        }
+
+        // Create initial wavefunction
+        function createInitialWavefunction() {
+            const state = document.getElementById('quantum-state').value;
+            const x0 = parseFloat(document.getElementById('position').value);
+            const p0 = parseFloat(document.getElementById('momentum').value);
+            const sigma = parseFloat(document.getElementById('width').value);
+            const n = parseInt(document.getElementById('energy-level').value);
+            
+            const N = 512;
+            const L = 40;
+            xGrid = [];
+            wavefunction = [];
+            potential = [];
+            
+            for (let i = 0; i < N; i++) {
+                const x = -L/2 + i * L / N;
+                xGrid.push(x);
+                
+                let psi;
+                switch(state) {
+                    case 'gaussian':
+                        const norm = Math.pow(2 * Math.PI * sigma * sigma, -0.25);
+                        const gaussian = Math.exp(-(x - x0) * (x - x0) / (4 * sigma * sigma));
+                        const phase = p0 * x;
+                        psi = new Complex(
+                            norm * gaussian * Math.cos(phase),
+                            norm * gaussian * Math.sin(phase)
+                        );
+                        break;
+                        
+                    case 'eigenstate':
+                        // Harmonic oscillator eigenstates
+                        const alpha = 1 / sigma;
+                        const Hn = hermitePolynomial(n, alpha * x);
+                        const norm_n = Math.sqrt(alpha / (Math.sqrt(Math.PI) * Math.pow(2, n) * factorial(n)));
+                        psi = new Complex(norm_n * Hn * Math.exp(-alpha * alpha * x * x / 2));
+                        break;
+                        
+                    case 'superposition':
+                        // Superposition of first two eigenstates
+                        const psi0 = Math.exp(-x * x / (2 * sigma * sigma)) / Math.pow(Math.PI * sigma * sigma, 0.25);
+                        const psi1 = Math.sqrt(2) * x * Math.exp(-x * x / (2 * sigma * sigma)) / Math.pow(Math.PI * sigma * sigma, 0.25);
+                        psi = new Complex((psi0 + psi1) / Math.sqrt(2));
+                        break;
+                        
+                    case 'coherent':
+                        // Coherent state (displaced ground state)
+                        const alpha_c = x0 + p0;
+                        const coherent = Math.exp(-(x - alpha_c) * (x - alpha_c) / (2 * sigma * sigma));
+                        psi = new Complex(coherent / Math.pow(Math.PI * sigma * sigma, 0.25));
+                        break;
+                        
+                    default:
+                        psi = new Complex(0);
+                }
+                
+                wavefunction.push(psi);
+                potential.push(createPotential(x, document.getElementById('potential-type').value));
+            }
+            
+            // Normalize
+            normalizeWavefunction();
+        }
+
+        // Hermite polynomials
+        function hermitePolynomial(n, x) {
+            if (n === 0) return 1;
+            if (n === 1) return 2 * x;
+            
+            let H0 = 1;
+            let H1 = 2 * x;
+            for (let i = 2; i <= n; i++) {
+                const H2 = 2 * x * H1 - 2 * (i - 1) * H0;
+                H0 = H1;
+                H1 = H2;
+            }
+            return H1;
+        }
+
+        function factorial(n) {
+            let result = 1;
+            for (let i = 2; i <= n; i++) result *= i;
+            return result;
+        }
+
+        // Normalize wavefunction
+        function normalizeWavefunction() {
+            const dx = xGrid[1] - xGrid[0];
+            let norm = 0;
+            
+            for (let psi of wavefunction) {
+                norm += psi.magnitude() * psi.magnitude() * dx;
+            }
+            
+            norm = Math.sqrt(norm);
+            for (let i = 0; i < wavefunction.length; i++) {
+                wavefunction[i] = new Complex(
+                    wavefunction[i].real / norm,
+                    wavefunction[i].imag / norm
+                );
+            }
+        }
+
+        // Time evolution using split-operator method
+        function evolveWavefunction(dt) {
+            const N = wavefunction.length;
+            const dx = xGrid[1] - xGrid[0];
+            const mass = parseFloat(document.getElementById('mass').value);
+            
+            // Apply potential evolution (half step)
+            for (let i = 0; i < N; i++) {
+                const phase = -potential[i] * dt / 2;
+                const expV = new Complex(Math.cos(phase), Math.sin(phase));
+                wavefunction[i] = wavefunction[i].multiply(expV);
+            }
+            
+            // FFT to momentum space
+            const psiK = fft(wavefunction);
+            
+            // Apply kinetic evolution
+            const dk = 2 * Math.PI / (N * dx);
+            for (let i = 0; i < N; i++) {
+                const k = (i < N/2) ? i * dk : (i - N) * dk;
+                const phase = -k * k * dt / (2 * mass);
+                const expK = new Complex(Math.cos(phase), Math.sin(phase));
+                psiK[i] = psiK[i].multiply(expK);
+            }
+            
+            // Inverse FFT back to position space
+            wavefunction = ifft(psiK);
+            
+            // Apply potential evolution (half step)
+            for (let i = 0; i < N; i++) {
+                const phase = -potential[i] * dt / 2;
+                const expV = new Complex(Math.cos(phase), Math.sin(phase));
+                wavefunction[i] = wavefunction[i].multiply(expV);
+            }
+        }
+
+        // Simple FFT implementation
+        function fft(data) {
+            const N = data.length;
+            if (N <= 1) return data;
+            
+            // Bit reversal
+            const reversed = new Array(N);
+            for (let i = 0; i < N; i++) {
+                let j = 0;
+                let k = i;
+                for (let bit = 0; bit < Math.log2(N); bit++) {
+                    j = (j << 1) | (k & 1);
+                    k >>= 1;
+                }
+                reversed[j] = data[i];
+            }
+            
+            // Cooley-Tukey FFT
+            for (let size = 2; size <= N; size *= 2) {
+                const halfSize = size / 2;
+                const angle = -2 * Math.PI / size;
+                
+                for (let start = 0; start < N; start += size) {
+                    for (let i = 0; i < halfSize; i++) {
+                        const twiddle = new Complex(
+                            Math.cos(angle * i),
+                            Math.sin(angle * i)
+                        );
+                        
+                        const even = reversed[start + i];
+                        const odd = reversed[start + i + halfSize].multiply(twiddle);
+                        
+                        reversed[start + i] = even.add(odd);
+                        reversed[start + i + halfSize] = even.add(odd.multiply(new Complex(-1)));
+                    }
+                }
+            }
+            
+            return reversed;
+        }
+
+        function ifft(data) {
+            const N = data.length;
+            // Conjugate
+            const conjugated = data.map(c => new Complex(c.real, -c.imag));
+            // Forward FFT
+            const result = fft(conjugated);
+            // Conjugate and scale
+            return result.map(c => new Complex(c.real / N, -c.imag / N));
+        }
+
+        // Calculate expectation values
+        function calculateExpectationValues() {
+            const dx = xGrid[1] - xGrid[0];
+            const mass = parseFloat(document.getElementById('mass').value);
+            
+            let avgX = 0, avgX2 = 0;
+            let avgP = 0, avgP2 = 0;
+            let totalE = 0;
+            
+            for (let i = 0; i < wavefunction.length; i++) {
+                const psiMag2 = wavefunction[i].magnitude() * wavefunction[i].magnitude();
+                
+                // Position
+                avgX += xGrid[i] * psiMag2 * dx;
+                avgX2 += xGrid[i] * xGrid[i] * psiMag2 * dx;
+                
+                // Kinetic energy (using finite differences)
+                if (i > 0 && i < wavefunction.length - 1) {
+                    const d2psi = wavefunction[i+1].add(wavefunction[i-1]).add(wavefunction[i].multiply(new Complex(-2)));
+                    const kinetic = -0.5 / mass * wavefunction[i].real * d2psi.real / (dx * dx);
+                    totalE += kinetic * dx;
+                }
+                
+                // Potential energy
+                totalE += potential[i] * psiMag2 * dx;
+            }
+            
+            // Momentum (simplified)
+            avgP = 0; // Zero for real wavefunctions
+            avgP2 = 1 / (2 * mass); // From uncertainty principle estimate
+            
+            const deltaX = Math.sqrt(avgX2 - avgX * avgX);
+            const deltaP = Math.sqrt(avgP2 - avgP * avgP);
+            
+            return {
+                energy: totalE.toFixed(3),
+                avgPosition: avgX.toFixed(3),
+                avgMomentum: avgP.toFixed(3),
+                positionUncertainty: deltaX.toFixed(3),
+                momentumUncertainty: deltaP.toFixed(3),
+                uncertaintyProduct: (deltaX * deltaP).toFixed(3)
+            };
+        }
+
+        // Main solver function
+        function solveSchrodinger() {
+            // Show loading
+            document.getElementById('loading').style.display = 'flex';
+            
+            // Create initial wavefunction
+            createInitialWavefunction();
+            
+            // Calculate and display
+            setTimeout(() => {
+                visualizeWavefunction();
+                updateResults();
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('results-panel').style.display = 'block';
+            }, 500);
+        }
+
+        // Visualization functions
+        function visualizeWavefunction() {
+            const real = wavefunction.map(psi => psi.real);
+            const imag = wavefunction.map(psi => psi.imag);
+            const prob = wavefunction.map(psi => psi.magnitude() * psi.magnitude());
+            
+            const data = [
+                {
+                    x: xGrid,
+                    y: real,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Re(ψ)',
+                    line: { color: '#00f260', width: 3 }
+                },
+                {
+                    x: xGrid,
+                    y: imag,
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'Im(ψ)',
+                    line: { color: '#0575e6', width: 3 }
+                },
+                {
+                    x: xGrid,
+                    y: potential.map(v => v * 0.1), // Scale for visibility
+                    type: 'scatter',
+                    mode: 'lines',
+                    name: 'V(x)/10',
+                    line: { color: '#e100ff', width: 2, dash: 'dash' }
+                }
+            ];
+            
+            const layout = {
+                paper_bgcolor: 'rgba(0,0,0,0)',
+                plot_bgcolor: 'rgba(0,0,0,0.3)',
+                font: { color: '#ffffff' },
+                title: {
+                    text: 'Quantum Wavefunction',
+                    font: { size: 24 }
+                },
+                xaxis: {
+                    title: 'Position (x)',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    zerolinecolor: 'rgba(255,255,255,0.2)'
+                },
+                yaxis: {
+                    title: 'Amplitude',
+                    gridcolor: 'rgba(255,255,255,0.1)',
+                    zerolinecolor: 'rgba(255,255,255,0.2)'
+                },
+                showlegend: true,
+                legend: {
+                    bgcolor: 'rgba(0,0,0,0.5)',
+                    bordercolor: 'rgba(255,255,255,0.2)',
+                    borderwidth: 1
+                },
+                margin: { t: 60, r: 50, b: 60, l: 70 }
+            };
+            
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ['pan2d', 'select2d', 'lasso2d']
+            };
+            
+            if (currentTab === 'wavefunction') {
+                Plotly.newPlot('wavefunction-plot', data, layout, config);
+            } else if (currentTab === 'probability') {
+                const probData = [{
+                    x: xGrid,
+                    y: prob,
+                    type: 'scatter',
+                    mode: 'lines',
+                    fill: 'tozeroy',
+                    name: '|ψ|²',
+                    line: { color: '#667eea', width: 3 }
+                }];
+                
+                layout.title.text = 'Probability Density';
+                layout.yaxis.title = '|ψ|²';
+                
+                Plotly.newPlot('probability-plot', probData, layout, config);
+            }
+        }
+
+        // Update results display
+        function updateResults() {
+            const values = calculateExpectationValues();
+            
+            document.getElementById('total-energy').textContent = values.energy + ' eV';
+            document.getElementById('avg-position').textContent = values.avgPosition;
+            document.getElementById('avg-momentum').textContent = values.avgMomentum;
+            document.getElementById('position-uncertainty').textContent = values.positionUncertainty;
+            document.getElementById('momentum-uncertainty').textContent = values.momentumUncertainty;
+            document.getElementById('uncertainty-product').textContent = values.uncertaintyProduct + ' ℏ';
+        }
+
+        // Tab switching
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Update tab styling
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            
+            // Show/hide plots
+            document.getElementById('wavefunction-plot').style.display = tab === 'wavefunction' ? 'block' : 'none';
+            document.getElementById('probability-plot').style.display = tab === 'probability' ? 'block' : 'none';
+            
+            // Redraw if needed
+            if (wavefunction.length > 0) {
+                visualizeWavefunction();
+            }
+        }
+
+        // Time evolution control
+        function updateTimeEvolution(slider) {
+            const time = parseFloat(slider.value);
+            document.getElementById('time-value').textContent = time.toFixed(1);
+            
+            if (wavefunction.length > 0) {
+                // Reset to initial state
+                createInitialWavefunction();
+                
+                // Evolve to specified time
+                const dt = 0.01;
+                const steps = Math.floor(time / dt);
+                
+                for (let i = 0; i < steps; i++) {
+                    evolveWavefunction(dt);
+                }
+                
+                // Update visualization
+                visualizeWavefunction();
+                updateResults();
+            }
+        }
+
+        // Initialize on load
+        window.onload = function() {
+            updatePotentialParams();
+        };
+    </script>
+</body>
+</html>
