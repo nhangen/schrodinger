@@ -312,7 +312,9 @@
         }
 
         #wavefunction-plot,
-        #probability-plot {
+        #probability-plot,
+        #phase-plot,
+        #energy-plot {
             width: 100%;
             height: 100%;
         }
@@ -347,7 +349,13 @@
             border-radius: 24px;
             padding: 2rem;
             display: none;
-            animation: slide-up 0.5s ease-out;
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        .results-panel.show {
+            display: block;
+            animation: slide-up 0.5s ease-out forwards;
         }
 
         @keyframes slide-up {
@@ -542,15 +550,17 @@
                 <h2 class="card-title">Wavefunction Visualization</h2>
                 
                 <div class="tabs">
-                    <div class="tab active" onclick="switchTab('wavefunction')">Wavefunction</div>
-                    <div class="tab" onclick="switchTab('probability')">Probability Density</div>
-                    <div class="tab" onclick="switchTab('phase')">Phase Space</div>
-                    <div class="tab" onclick="switchTab('energy')">Energy Spectrum</div>
+                    <div class="tab active" onclick="switchTab('wavefunction', this)">Wavefunction</div>
+                    <div class="tab" onclick="switchTab('probability', this)">Probability Density</div>
+                    <div class="tab" onclick="switchTab('phase', this)">Phase Space</div>
+                    <div class="tab" onclick="switchTab('energy', this)">Energy Spectrum</div>
                 </div>
                 
                 <div class="visualization-container">
                     <div id="wavefunction-plot"></div>
                     <div id="probability-plot" style="display: none;"></div>
+                    <div id="phase-plot" style="display: none;"></div>
+                    <div id="energy-plot" style="display: none;"></div>
                     <div class="loading-overlay" id="loading">
                         <div class="quantum-loader">
                             <div></div>
@@ -970,7 +980,8 @@
                 visualizeWavefunction();
                 updateResults();
                 document.getElementById('loading').style.display = 'none';
-                document.getElementById('results-panel').style.display = 'block';
+                const resultsPanel = document.getElementById('results-panel');
+                resultsPanel.classList.add('show');
             }, 500);
         }
 
@@ -979,49 +990,24 @@
             const real = wavefunction.map(psi => psi.real);
             const imag = wavefunction.map(psi => psi.imag);
             const prob = wavefunction.map(psi => psi.magnitude() * psi.magnitude());
-            
-            const data = [
-                {
-                    x: xGrid,
-                    y: real,
-                    type: 'scatter',
-                    mode: 'lines',
-                    name: 'Re(ψ)',
-                    line: { color: '#00f260', width: 3 }
-                },
-                {
-                    x: xGrid,
-                    y: imag,
-                    type: 'scatter',
-                    mode: 'lines',
-                    name: 'Im(ψ)',
-                    line: { color: '#0575e6', width: 3 }
-                },
-                {
-                    x: xGrid,
-                    y: potential.map(v => v * 0.1), // Scale for visibility
-                    type: 'scatter',
-                    mode: 'lines',
-                    name: 'V(x)/10',
-                    line: { color: '#e100ff', width: 2, dash: 'dash' }
-                }
-            ];
-            
-            const layout = {
+            const phase = wavefunction.map(psi => psi.phase());
+
+            const config = {
+                responsive: true,
+                displayModeBar: true,
+                displaylogo: false,
+                modeBarButtonsToRemove: ['pan2d', 'select2d', 'lasso2d']
+            };
+
+            const baseLayout = {
                 paper_bgcolor: 'rgba(0,0,0,0)',
                 plot_bgcolor: 'rgba(0,0,0,0.3)',
                 font: { color: '#ffffff' },
-                title: {
-                    text: 'Quantum Wavefunction',
-                    font: { size: 24 }
-                },
                 xaxis: {
-                    title: 'Position (x)',
                     gridcolor: 'rgba(255,255,255,0.1)',
                     zerolinecolor: 'rgba(255,255,255,0.2)'
                 },
                 yaxis: {
-                    title: 'Amplitude',
                     gridcolor: 'rgba(255,255,255,0.1)',
                     zerolinecolor: 'rgba(255,255,255,0.2)'
                 },
@@ -1033,16 +1019,44 @@
                 },
                 margin: { t: 60, r: 50, b: 60, l: 70 }
             };
-            
-            const config = {
-                responsive: true,
-                displayModeBar: true,
-                displaylogo: false,
-                modeBarButtonsToRemove: ['pan2d', 'select2d', 'lasso2d']
-            };
-            
+
             if (currentTab === 'wavefunction') {
+                const data = [
+                    {
+                        x: xGrid,
+                        y: real,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: 'Re(ψ)',
+                        line: { color: '#00f260', width: 3 }
+                    },
+                    {
+                        x: xGrid,
+                        y: imag,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: 'Im(ψ)',
+                        line: { color: '#0575e6', width: 3 }
+                    },
+                    {
+                        x: xGrid,
+                        y: potential.map(v => v * 0.1), // Scale for visibility
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: 'V(x)/10',
+                        line: { color: '#e100ff', width: 2, dash: 'dash' }
+                    }
+                ];
+
+                const layout = {
+                    ...baseLayout,
+                    title: { text: 'Quantum Wavefunction', font: { size: 24 } },
+                    xaxis: { ...baseLayout.xaxis, title: 'Position (x)' },
+                    yaxis: { ...baseLayout.yaxis, title: 'Amplitude' }
+                };
+
                 Plotly.newPlot('wavefunction-plot', data, layout, config);
+
             } else if (currentTab === 'probability') {
                 const probData = [{
                     x: xGrid,
@@ -1053,11 +1067,109 @@
                     name: '|ψ|²',
                     line: { color: '#667eea', width: 3 }
                 }];
-                
-                layout.title.text = 'Probability Density';
-                layout.yaxis.title = '|ψ|²';
-                
+
+                const layout = {
+                    ...baseLayout,
+                    title: { text: 'Probability Density', font: { size: 24 } },
+                    xaxis: { ...baseLayout.xaxis, title: 'Position (x)' },
+                    yaxis: { ...baseLayout.yaxis, title: '|ψ|²' }
+                };
+
                 Plotly.newPlot('probability-plot', probData, layout, config);
+
+            } else if (currentTab === 'phase') {
+                // Phase space plot (position vs momentum density)
+                const dx = xGrid[1] - xGrid[0];
+                const N = wavefunction.length;
+                const dk = 2 * Math.PI / (N * dx);
+
+                // Calculate momentum space wavefunction
+                const psiK = fft(wavefunction);
+                const momentum = [];
+                const momentumProb = [];
+
+                for (let i = 0; i < N; i++) {
+                    const k = (i < N/2) ? i * dk : (i - N) * dk;
+                    momentum.push(k);
+                    momentumProb.push(psiK[i].magnitude() * psiK[i].magnitude());
+                }
+
+                const phaseData = [
+                    {
+                        x: xGrid,
+                        y: prob,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: 'Position Space',
+                        line: { color: '#00f260', width: 3 },
+                        xaxis: 'x',
+                        yaxis: 'y'
+                    },
+                    {
+                        x: momentum,
+                        y: momentumProb,
+                        type: 'scatter',
+                        mode: 'lines',
+                        name: 'Momentum Space',
+                        line: { color: '#0575e6', width: 3 },
+                        xaxis: 'x2',
+                        yaxis: 'y2'
+                    }
+                ];
+
+                const layout = {
+                    ...baseLayout,
+                    title: { text: 'Phase Space Distribution', font: { size: 24 } },
+                    grid: { rows: 2, columns: 1, pattern: 'independent' },
+                    xaxis: { ...baseLayout.xaxis, title: 'Position (x)', anchor: 'y' },
+                    yaxis: { ...baseLayout.yaxis, title: '|ψ(x)|²', anchor: 'x' },
+                    xaxis2: { ...baseLayout.xaxis, title: 'Momentum (k)', anchor: 'y2' },
+                    yaxis2: { ...baseLayout.yaxis, title: '|ψ(k)|²', anchor: 'x2' }
+                };
+
+                Plotly.newPlot('phase-plot', phaseData, layout, config);
+
+            } else if (currentTab === 'energy') {
+                // Energy spectrum (Fourier components)
+                const psiK = fft(wavefunction);
+                const energies = [];
+                const spectrum = [];
+                const mass = parseFloat(document.getElementById('mass').value);
+                const dx = xGrid[1] - xGrid[0];
+                const N = wavefunction.length;
+                const dk = 2 * Math.PI / (N * dx);
+
+                for (let i = 0; i < N/2; i++) {
+                    const k = i * dk;
+                    const energy = k * k / (2 * mass);
+                    energies.push(energy);
+                    const posMag = psiK[i].magnitude() * psiK[i].magnitude();
+                    // DC bin (i=0) has no distinct -k partner
+                    const negIdx = (N - i) % N;
+                    const mag = i === 0
+                        ? posMag
+                        : posMag + psiK[negIdx].magnitude() * psiK[negIdx].magnitude();
+                    spectrum.push(mag);
+                }
+
+                const energyData = [{
+                    x: energies,
+                    y: spectrum,
+                    type: 'scatter',
+                    mode: 'lines',
+                    fill: 'tozeroy',
+                    name: 'Energy Spectrum',
+                    line: { color: '#e100ff', width: 3 }
+                }];
+
+                const layout = {
+                    ...baseLayout,
+                    title: { text: 'Energy Spectrum', font: { size: 24 } },
+                    xaxis: { ...baseLayout.xaxis, title: 'Energy (E)' },
+                    yaxis: { ...baseLayout.yaxis, title: 'Spectral Density' }
+                };
+
+                Plotly.newPlot('energy-plot', energyData, layout, config);
             }
         }
 
@@ -1074,17 +1186,21 @@
         }
 
         // Tab switching
-        function switchTab(tab) {
+        function switchTab(tab, clickedElement) {
             currentTab = tab;
-            
+
             // Update tab styling
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-            event.target.classList.add('active');
-            
+            if (clickedElement) {
+                clickedElement.classList.add('active');
+            }
+
             // Show/hide plots
             document.getElementById('wavefunction-plot').style.display = tab === 'wavefunction' ? 'block' : 'none';
             document.getElementById('probability-plot').style.display = tab === 'probability' ? 'block' : 'none';
-            
+            document.getElementById('phase-plot').style.display = tab === 'phase' ? 'block' : 'none';
+            document.getElementById('energy-plot').style.display = tab === 'energy' ? 'block' : 'none';
+
             // Redraw if needed
             if (wavefunction.length > 0) {
                 visualizeWavefunction();
