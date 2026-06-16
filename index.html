@@ -1118,11 +1118,17 @@
                 const psiK = fft(wavefunction);
                 const momentum = [];
                 const momentumProb = [];
+                // dx²/2π converts the raw DFT magnitude to a density that
+                // integrates to 1 over dk (Parseval), matching |ψ(x)|².
+                const kNormFactor = dx * dx / (2 * Math.PI);
 
-                for (let i = 0; i < N; i++) {
+                // fftshift: emit bins in ascending-k order so the line plot
+                // doesn't draw a wraparound streak at the Nyquist boundary.
+                for (let idx = 0; idx < N; idx++) {
+                    const i = (idx + N / 2) % N;
                     const k = (i < N/2) ? i * dk : (i - N) * dk;
                     momentum.push(k);
-                    momentumProb.push(psiK[i].magnitude() * psiK[i].magnitude());
+                    momentumProb.push(psiK[i].magnitude() * psiK[i].magnitude() * kNormFactor);
                 }
 
                 const phaseData = [
@@ -1150,7 +1156,7 @@
 
                 const layout = {
                     ...baseLayout,
-                    title: { text: 'Phase Space Distribution', font: { size: 24 } },
+                    title: { text: 'Position & Momentum Distributions', font: { size: 24 } },
                     grid: { rows: 2, columns: 1, pattern: 'independent' },
                     xaxis: { ...baseLayout.xaxis, title: 'Position (x)', anchor: 'y' },
                     yaxis: { ...baseLayout.yaxis, title: '|ψ(x)|²', anchor: 'x' },
