@@ -820,14 +820,20 @@
 
         // Normalize wavefunction
         function normalizeWavefunction() {
+            if (wavefunction.length < 2 || xGrid.length < 2) {
+                throw new Error('Cannot normalize: wavefunction grid is empty');
+            }
             const dx = xGrid[1] - xGrid[0];
             let norm = 0;
-            
+
             for (let psi of wavefunction) {
                 norm += psi.magnitude() * psi.magnitude() * dx;
             }
-            
+
             norm = Math.sqrt(norm);
+            if (!(norm > 0)) {
+                throw new Error('Cannot normalize: wavefunction collapsed to zero');
+            }
             for (let i = 0; i < wavefunction.length; i++) {
                 wavefunction[i] = new Complex(
                     wavefunction[i].real / norm,
@@ -836,11 +842,19 @@
             }
         }
 
+        function getMass() {
+            const mass = parseFloat(document.getElementById('mass').value);
+            if (!Number.isFinite(mass) || mass <= 0) {
+                throw new Error('Mass must be a positive number');
+            }
+            return mass;
+        }
+
         // Time evolution using split-operator method
         function evolveWavefunction(dt) {
             const N = wavefunction.length;
             const dx = xGrid[1] - xGrid[0];
-            const mass = parseFloat(document.getElementById('mass').value);
+            const mass = getMass();
             
             // Apply potential evolution (half step)
             for (let i = 0; i < N; i++) {
@@ -876,7 +890,10 @@
         function fft(data) {
             const N = data.length;
             if (N <= 1) return data;
-            
+            if ((N & (N - 1)) !== 0) {
+                throw new Error(`fft requires a power-of-2 length, got ${N}`);
+            }
+
             // Bit reversal
             const reversed = new Array(N);
             for (let i = 0; i < N; i++) {
@@ -926,7 +943,7 @@
         // Calculate expectation values
         function calculateExpectationValues() {
             const dx = xGrid[1] - xGrid[0];
-            const mass = parseFloat(document.getElementById('mass').value);
+            const mass = getMass();
             
             let avgX = 0, avgX2 = 0;
             let avgP = 0, avgP2 = 0;
@@ -954,8 +971,8 @@
             avgP = 0; // Zero for real wavefunctions
             avgP2 = 1 / (2 * mass); // From uncertainty principle estimate
             
-            const deltaX = Math.sqrt(avgX2 - avgX * avgX);
-            const deltaP = Math.sqrt(avgP2 - avgP * avgP);
+            const deltaX = Math.sqrt(Math.max(0, avgX2 - avgX * avgX));
+            const deltaP = Math.sqrt(Math.max(0, avgP2 - avgP * avgP));
             
             return {
                 energy: totalE.toFixed(3),
@@ -971,22 +988,52 @@
         function solveSchrodinger() {
             // Show loading
             document.getElementById('loading').style.display = 'flex';
-            
-            // Create initial wavefunction
-            createInitialWavefunction();
-            
+
             // Calculate and display
             setTimeout(() => {
-                visualizeWavefunction();
-                updateResults();
-                document.getElementById('loading').style.display = 'none';
-                const resultsPanel = document.getElementById('results-panel');
-                resultsPanel.classList.add('show');
+                try {
+                    createInitialWavefunction();
+                    visualizeWavefunction();
+                    updateResults();
+                    const resultsPanel = document.getElementById('results-panel');
+                    resultsPanel.classList.add('show');
+                } catch (err) {
+                    console.error('Solver failed:', err);
+                    surfaceSolverError();
+                } finally {
+                    document.getElementById('loading').style.display = 'none';
+                }
             }, 500);
+        }
+
+        function surfaceSolverError() {
+            const loading = document.getElementById('loading');
+            if (loading) loading.style.display = 'none';
+            // Route the message to the wavefunction tab so it can't land in a
+            // hidden plot div while a different tab stays active.
+            ['probability-plot', 'phase-plot', 'energy-plot'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            currentTab = 'wavefunction';
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            const wfTab = document.querySelector('.tab[onclick*="wavefunction"]');
+            if (wfTab) wfTab.classList.add('active');
+            const target = document.getElementById('wavefunction-plot');
+            if (!target) return;
+            target.style.display = 'block';
+            target.textContent = '';
+            const msg = document.createElement('div');
+            msg.style.cssText = 'padding:2rem;text-align:center;color:#ff6b6b;';
+            msg.textContent = 'Something went wrong while solving. Open the browser console for details.';
+            target.appendChild(msg);
         }
 
         // Visualization functions
         function visualizeWavefunction() {
+            if (typeof Plotly === 'undefined') {
+                throw new Error('Plotly failed to load (check network/CDN)');
+            }
             const real = wavefunction.map(psi => psi.real);
             const imag = wavefunction.map(psi => psi.imag);
             const prob = wavefunction.map(psi => psi.magnitude() * psi.magnitude());
@@ -1087,11 +1134,17 @@
                 const psiK = fft(wavefunction);
                 const momentum = [];
                 const momentumProb = [];
+                // dx²/2π converts the raw DFT magnitude to a density that
+                // integrates to 1 over dk (Parseval), matching |ψ(x)|².
+                const kNormFactor = dx * dx / (2 * Math.PI);
 
-                for (let i = 0; i < N; i++) {
+                // fftshift: emit bins in ascending-k order so the line plot
+                // doesn't draw a wraparound streak at the Nyquist boundary.
+                for (let idx = 0; idx < N; idx++) {
+                    const i = (idx + N / 2) % N;
                     const k = (i < N/2) ? i * dk : (i - N) * dk;
                     momentum.push(k);
-                    momentumProb.push(psiK[i].magnitude() * psiK[i].magnitude());
+                    momentumProb.push(psiK[i].magnitude() * psiK[i].magnitude() * kNormFactor);
                 }
 
                 const phaseData = [
@@ -1119,7 +1172,7 @@
 
                 const layout = {
                     ...baseLayout,
-                    title: { text: 'Phase Space Distribution', font: { size: 24 } },
+                    title: { text: 'Position & Momentum Distributions', font: { size: 24 } },
                     grid: { rows: 2, columns: 1, pattern: 'independent' },
                     xaxis: { ...baseLayout.xaxis, title: 'Position (x)', anchor: 'y' },
                     yaxis: { ...baseLayout.yaxis, title: '|ψ(x)|²', anchor: 'x' },
@@ -1130,11 +1183,12 @@
                 Plotly.newPlot('phase-plot', phaseData, layout, config);
 
             } else if (currentTab === 'energy') {
-                // Energy spectrum (Fourier components)
+                // Relative spectral weight per energy, not a normalized density:
+                // unlike the momentum plot this keeps raw |ψ(k)|² magnitudes.
                 const psiK = fft(wavefunction);
                 const energies = [];
                 const spectrum = [];
-                const mass = parseFloat(document.getElementById('mass').value);
+                const mass = getMass();
                 const dx = xGrid[1] - xGrid[0];
                 const N = wavefunction.length;
                 const dk = 2 * Math.PI / (N * dx);
@@ -1203,7 +1257,12 @@
 
             // Redraw if needed
             if (wavefunction.length > 0) {
-                visualizeWavefunction();
+                try {
+                    visualizeWavefunction();
+                } catch (err) {
+                    console.error('Visualization failed:', err);
+                    surfaceSolverError();
+                }
             }
         }
 
@@ -1213,20 +1272,25 @@
             document.getElementById('time-value').textContent = time.toFixed(1);
             
             if (wavefunction.length > 0) {
-                // Reset to initial state
-                createInitialWavefunction();
-                
-                // Evolve to specified time
-                const dt = 0.01;
-                const steps = Math.floor(time / dt);
-                
-                for (let i = 0; i < steps; i++) {
-                    evolveWavefunction(dt);
+                try {
+                    // Reset to initial state
+                    createInitialWavefunction();
+
+                    // Evolve to specified time
+                    const dt = 0.01;
+                    const steps = Math.floor(time / dt);
+
+                    for (let i = 0; i < steps; i++) {
+                        evolveWavefunction(dt);
+                    }
+
+                    // Update visualization
+                    visualizeWavefunction();
+                    updateResults();
+                } catch (err) {
+                    console.error('Time-evolution update failed:', err);
+                    surfaceSolverError();
                 }
-                
-                // Update visualization
-                visualizeWavefunction();
-                updateResults();
             }
         }
 
