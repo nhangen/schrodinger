@@ -842,11 +842,19 @@
             }
         }
 
+        function getMass() {
+            const mass = parseFloat(document.getElementById('mass').value);
+            if (!Number.isFinite(mass) || mass <= 0) {
+                throw new Error('Mass must be a positive number');
+            }
+            return mass;
+        }
+
         // Time evolution using split-operator method
         function evolveWavefunction(dt) {
             const N = wavefunction.length;
             const dx = xGrid[1] - xGrid[0];
-            const mass = parseFloat(document.getElementById('mass').value);
+            const mass = getMass();
             
             // Apply potential evolution (half step)
             for (let i = 0; i < N; i++) {
@@ -935,7 +943,7 @@
         // Calculate expectation values
         function calculateExpectationValues() {
             const dx = xGrid[1] - xGrid[0];
-            const mass = parseFloat(document.getElementById('mass').value);
+            const mass = getMass();
             
             let avgX = 0, avgX2 = 0;
             let avgP = 0, avgP2 = 0;
@@ -1179,7 +1187,7 @@
                 const psiK = fft(wavefunction);
                 const energies = [];
                 const spectrum = [];
-                const mass = parseFloat(document.getElementById('mass').value);
+                const mass = getMass();
                 const dx = xGrid[1] - xGrid[0];
                 const N = wavefunction.length;
                 const dk = 2 * Math.PI / (N * dx);
