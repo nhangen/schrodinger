@@ -1143,9 +1143,12 @@
                     const k = i * dk;
                     const energy = k * k / (2 * mass);
                     energies.push(energy);
-                    // Sum both k and -k contributions
-                    const mag = psiK[i].magnitude() * psiK[i].magnitude() +
-                                psiK[N-i-1].magnitude() * psiK[N-i-1].magnitude();
+                    const posMag = psiK[i].magnitude() * psiK[i].magnitude();
+                    // DC bin (i=0) has no distinct -k partner
+                    const negIdx = (N - i) % N;
+                    const mag = i === 0
+                        ? posMag
+                        : posMag + psiK[negIdx].magnitude() * psiK[negIdx].magnitude();
                     spectrum.push(mag);
                 }
 
