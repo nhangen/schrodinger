@@ -1001,6 +1001,16 @@
         function surfaceSolverError() {
             const loading = document.getElementById('loading');
             if (loading) loading.style.display = 'none';
+            // Route the message to the wavefunction tab so it can't land in a
+            // hidden plot div while a different tab stays active.
+            ['probability-plot', 'phase-plot', 'energy-plot'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = 'none';
+            });
+            currentTab = 'wavefunction';
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            const wfTab = document.querySelector('.tab[onclick*="wavefunction"]');
+            if (wfTab) wfTab.classList.add('active');
             const target = document.getElementById('wavefunction-plot');
             if (!target) return;
             target.style.display = 'block';
