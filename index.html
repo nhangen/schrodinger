@@ -1183,7 +1183,8 @@
                 Plotly.newPlot('phase-plot', phaseData, layout, config);
 
             } else if (currentTab === 'energy') {
-                // Energy spectrum (Fourier components)
+                // Relative spectral weight per energy, not a normalized density:
+                // unlike the momentum plot this keeps raw |ψ(k)|² magnitudes.
                 const psiK = fft(wavefunction);
                 const energies = [];
                 const spectrum = [];
