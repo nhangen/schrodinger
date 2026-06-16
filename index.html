@@ -980,13 +980,11 @@
         function solveSchrodinger() {
             // Show loading
             document.getElementById('loading').style.display = 'flex';
-            
-            // Create initial wavefunction
-            createInitialWavefunction();
-            
+
             // Calculate and display
             setTimeout(() => {
                 try {
+                    createInitialWavefunction();
                     visualizeWavefunction();
                     updateResults();
                     const resultsPanel = document.getElementById('results-panel');
@@ -1255,19 +1253,19 @@
             document.getElementById('time-value').textContent = time.toFixed(1);
             
             if (wavefunction.length > 0) {
-                // Reset to initial state
-                createInitialWavefunction();
-                
-                // Evolve to specified time
-                const dt = 0.01;
-                const steps = Math.floor(time / dt);
-                
-                for (let i = 0; i < steps; i++) {
-                    evolveWavefunction(dt);
-                }
-                
-                // Update visualization
                 try {
+                    // Reset to initial state
+                    createInitialWavefunction();
+
+                    // Evolve to specified time
+                    const dt = 0.01;
+                    const steps = Math.floor(time / dt);
+
+                    for (let i = 0; i < steps; i++) {
+                        evolveWavefunction(dt);
+                    }
+
+                    // Update visualization
                     visualizeWavefunction();
                     updateResults();
                 } catch (err) {
