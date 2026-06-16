@@ -876,7 +876,10 @@
         function fft(data) {
             const N = data.length;
             if (N <= 1) return data;
-            
+            if ((N & (N - 1)) !== 0) {
+                throw new Error(`fft requires a power-of-2 length, got ${N}`);
+            }
+
             // Bit reversal
             const reversed = new Array(N);
             for (let i = 0; i < N; i++) {
