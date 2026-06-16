@@ -820,14 +820,20 @@
 
         // Normalize wavefunction
         function normalizeWavefunction() {
+            if (wavefunction.length < 2 || xGrid.length < 2) {
+                throw new Error('Cannot normalize: wavefunction grid is empty');
+            }
             const dx = xGrid[1] - xGrid[0];
             let norm = 0;
-            
+
             for (let psi of wavefunction) {
                 norm += psi.magnitude() * psi.magnitude() * dx;
             }
-            
+
             norm = Math.sqrt(norm);
+            if (!(norm > 0)) {
+                throw new Error('Cannot normalize: wavefunction collapsed to zero');
+            }
             for (let i = 0; i < wavefunction.length; i++) {
                 wavefunction[i] = new Complex(
                     wavefunction[i].real / norm,
@@ -957,8 +963,8 @@
             avgP = 0; // Zero for real wavefunctions
             avgP2 = 1 / (2 * mass); // From uncertainty principle estimate
             
-            const deltaX = Math.sqrt(avgX2 - avgX * avgX);
-            const deltaP = Math.sqrt(avgP2 - avgP * avgP);
+            const deltaX = Math.sqrt(Math.max(0, avgX2 - avgX * avgX));
+            const deltaP = Math.sqrt(Math.max(0, avgP2 - avgP * avgP));
             
             return {
                 energy: totalE.toFixed(3),
