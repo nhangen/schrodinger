@@ -986,16 +986,38 @@
             
             // Calculate and display
             setTimeout(() => {
-                visualizeWavefunction();
-                updateResults();
-                document.getElementById('loading').style.display = 'none';
-                const resultsPanel = document.getElementById('results-panel');
-                resultsPanel.classList.add('show');
+                try {
+                    visualizeWavefunction();
+                    updateResults();
+                    const resultsPanel = document.getElementById('results-panel');
+                    resultsPanel.classList.add('show');
+                } catch (err) {
+                    console.error('Solver failed:', err);
+                    surfaceSolverError();
+                } finally {
+                    document.getElementById('loading').style.display = 'none';
+                }
             }, 500);
+        }
+
+        function surfaceSolverError() {
+            const loading = document.getElementById('loading');
+            if (loading) loading.style.display = 'none';
+            const target = document.getElementById('wavefunction-plot');
+            if (!target) return;
+            target.style.display = 'block';
+            target.textContent = '';
+            const msg = document.createElement('div');
+            msg.style.cssText = 'padding:2rem;text-align:center;color:#ff6b6b;';
+            msg.textContent = 'Something went wrong while solving. Open the browser console for details.';
+            target.appendChild(msg);
         }
 
         // Visualization functions
         function visualizeWavefunction() {
+            if (typeof Plotly === 'undefined') {
+                throw new Error('Plotly failed to load (check network/CDN)');
+            }
             const real = wavefunction.map(psi => psi.real);
             const imag = wavefunction.map(psi => psi.imag);
             const prob = wavefunction.map(psi => psi.magnitude() * psi.magnitude());
@@ -1212,7 +1234,12 @@
 
             // Redraw if needed
             if (wavefunction.length > 0) {
-                visualizeWavefunction();
+                try {
+                    visualizeWavefunction();
+                } catch (err) {
+                    console.error('Visualization failed:', err);
+                    surfaceSolverError();
+                }
             }
         }
 
@@ -1234,8 +1261,13 @@
                 }
                 
                 // Update visualization
-                visualizeWavefunction();
-                updateResults();
+                try {
+                    visualizeWavefunction();
+                    updateResults();
+                } catch (err) {
+                    console.error('Time-evolution update failed:', err);
+                    surfaceSolverError();
+                }
             }
         }
 
